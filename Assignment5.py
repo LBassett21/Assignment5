@@ -1,8 +1,10 @@
 import sqlite3
 
+# Using the database from assignment 3
 db = sqlite3.connect('assignment3.db')
 cursor = db.cursor()
 
+# User parent class definition
 class user:
     def __init__(self, ID, f, l):
         self.firstname = f
@@ -15,22 +17,28 @@ class user:
     def setID(self, i):
         self.ID = i
 
+# Student class definition. 
 class student(user):
     def __init__(self, ID, firstname, lastname, expdgradyr, major, email):
         super().__init__(ID, firstname, lastname)
         self.expdgradyr = expdgradyr
         self.major = major
         self.email = email
-        self.schedule = []
+        self.schedule = [] # Schedule is a list of CRN's that can be added
+    # Searches for course
     def searchCourse(self):
+        # Opens up courses database
         cursor.execute("PRAGMA table_info(courses)")
         columns = cursor.fetchall()
+        # pulls the headers of each of the columns 
         column_names = [column[1] for column in columns]
 
+        # Prints out to the user column names that they can query by
         print("Available columns for search:")
         for i, column in enumerate(column_names, start=1):
             print(f"{i}. {column}")
 
+        # Based on choice, it will query the user's choice and print all rows that meet the requirements.
         choice = input("Enter the column number to search: ")
         if choice.isdigit() and int(choice) in range(1, len(column_names) + 1):
             column = column_names[int(choice) - 1]
@@ -47,6 +55,8 @@ class student(user):
                 print("No results found.")
         else:
             print("Invalid column choice.")
+
+    # Add drop course. Takes in ad. If ad == true, then it will add course, else it will drop.
     def addDropCourse(self, ad):
         crn = input("Enter the CRN of the course: ")
 
@@ -60,6 +70,7 @@ class student(user):
                 print("Course with CRN", crn, "is not in your schedule.")
             else:
                 if ad:
+                    # Checks for conflicting courses in schedule
                     conflicting_courses = []
                     for scheduled_crn in self.schedule:
                         cursor.execute("""SELECT * FROM courses WHERE CRN=?""", (scheduled_crn,))
@@ -79,12 +90,14 @@ class student(user):
         else:
             print("Course with CRN", crn, "does not exist.")
 
+    # Prints the schedule of the user based on the CRN's in their schedule
     def printSchedule(self):
          print("------ Schedule ------")
 
          cursor.execute("""SELECT * FROM courses WHERE CRN IN ({}) ORDER BY TIME""".format(','.join(self.schedule)))
          scheduled_courses = cursor.fetchall()
 
+         # Maps the days based on the database format to text format
          day_mapping = {'M': 'Monday', 'T': 'Tuesday', 'W': 'Wednesday', 'R': 'Thursday', 'F': 'Friday'}
 
          sorted_courses = sorted(scheduled_courses, key=lambda x: x[3])
@@ -118,6 +131,8 @@ class instructor(user):
         self.department = department
         self.email = email
         self.schedule = []
+
+    # Prints the schedule of the user based on the CRN's in their schedule
     def printSchedule(self):
          print("------ Schedule ------")
 
@@ -147,8 +162,12 @@ class instructor(user):
              print(f"CRN: {crn} | Course: {title} | Time: {start_time}-{end_time}")
 
          print("----------------------")
+
+    # Not implemented/added
     def printClassList(self):
         print("Printed out your class list! Kinda...")
+
+    # searches for courses in database (same as student)
     def searchCourse(self):
         cursor.execute("PRAGMA table_info(courses)")
         columns = cursor.fetchall()
@@ -174,6 +193,8 @@ class instructor(user):
                 print("No results found.")
         else:
             print("Invalid column choice.")
+
+    # Adds/Drops course (same as student)
     def addDropCourse(self, ad):
         crn = input("Enter the CRN of the course: ")
         cursor.execute("""SELECT * FROM courses WHERE CRN=?""", (crn,))
@@ -213,6 +234,8 @@ class Admin(user):
         self.title = title
         self.office = office
         self.email = email
+
+    # Add or remove user. If ar == true, then it will add user, else remove user
     def addRemoveUser(self, ar):
         if ar == True:
             print("What type of user would you like to add?")
@@ -248,6 +271,7 @@ class Admin(user):
             else:
                 print("Invalid Input!")
         else:
+            # remove user based on ID.
             print("Please enter the ID of the user")
             removeid = input("ID Number: ")
             cursor.execute("""SELECT ID FROM admin WHERE ID=?""", (removeid,))
@@ -276,6 +300,7 @@ class Admin(user):
             else:
                 print("User not found in the database")
 
+    # Add/remove course. If ar == true, add course, else remove course
     def addRemoveCourse(self, ar):
         if ar:
             print("Please enter the following information")
@@ -310,13 +335,16 @@ class Admin(user):
                     print("Exiting...")
                 else:
                     print("Invalid input!")
-            
+    
+    # prints all courses
     def printRoster(self):
         cursor.execute("""SELECT * FROM courses""")
         course_info = cursor.fetchall()
         print("----- Courses -----")
         for row in course_info:
             print(row)
+
+    # modify user based on selected ID
     def modifyUser(self):
         print("Enter the ID of the user that you would like to edit")
         editID = input("ID Number: ")
@@ -449,6 +477,7 @@ class Admin(user):
                     case _:
                         print("Invalid input!")
 
+# function to add admin's to a list of objets
 def add_admin():
     admin_list = []
     cursor.execute("""SELECT * FROM admin""")
@@ -465,6 +494,7 @@ def add_admin():
 
     return admin_list
 
+# function to add students's to a list of objets
 def add_student():
     student_list = []
     cursor.execute("""SELECT * FROM student""")
@@ -481,6 +511,7 @@ def add_student():
 
     return student_list
 
+# function to add instructors's to a list of objets
 def add_instructor():
     instructor_list = []
     cursor.execute("""SELECT * FROM instructor""")
@@ -497,6 +528,7 @@ def add_instructor():
 
     return instructor_list
 
+# Adds a new admin to the database
 def new_admin(ID, firstname, lastname, title, office, email):
     cursor.execute("""SELECT ID FROM admin WHERE ID=?""", (ID,))
     existing_id = cursor.fetchone()
@@ -505,8 +537,9 @@ def new_admin(ID, firstname, lastname, title, office, email):
         print("Error: User with ID", ID, "already exists.")
     else:
         cursor.execute("""INSERT INTO admin (ID, NAME, SURNAME, TITLE, OFFICE, EMAIL) VALUES (?,?,?,?,?,?)""",(ID,firstname,lastname,title,office,email))
-        db.commit()
+        db.all
 
+# Adds a new instructor to the database
 def new_instructor(ID, first_name, last_name, title, yearofhire, department, email):
     cursor.execute("""SELECT ID FROM instructor WHERE ID=?""", (ID,))
     existing_id = cursor.fetchone()
@@ -517,6 +550,7 @@ def new_instructor(ID, first_name, last_name, title, yearofhire, department, ema
         cursor.execute("""INSERT INTO instructor (ID, NAME, SURNAME, TITLE, HIREYR, DEPT, EMAIL) VALUES (?,?,?,?,?,?,?)""",(ID, first_name, last_name, title, yearofhire, department, email))
         db.commit()
 
+# Adds a new student to the database
 def new_student(ID, first_name, last_name, expectedgradyear, major, email):
     cursor.execute("""SELECT ID FROM student WHERE ID=?""", (ID,))
     existing_id = cursor.fetchone()
@@ -527,6 +561,7 @@ def new_student(ID, first_name, last_name, expectedgradyear, major, email):
         cursor.execute("""INSERT INTO student (ID, NAME, SURNAME, GRADYEAR, MAJOR, EMAIL) VALUES (?,?,?,?,?,?)""",(ID, first_name, last_name, expectedgradyear, major, email))
         db.commit()
 
+# Print's the database at start of program
 def print_database():
     admin_objects = add_admin()
     student_objects = add_student()
@@ -544,12 +579,14 @@ def print_database():
     for Admin in admin_objects:
         print(Admin.ID, Admin.firstname, Admin.lastname, Admin.title, Admin.office, Admin.email)
 
-
+# Init functions when program is run
 admin_objects = add_admin()
 student_objects = add_student()
 instructor_object = add_instructor()
 print_database()
 
+
+# Converts the 24 hour format to 12 hour format for schedule printing
 def convert_time_format(time):
     hours, minutes = time.split(':')
     period = 'AM' if int(hours) < 12 else 'PM'
@@ -559,6 +596,7 @@ def convert_time_format(time):
 
     return f"{hours}:{minutes} {period}"
 
+# Login function for all users
 def login():
     while True:
 
@@ -588,8 +626,9 @@ def login():
             access_granted = True
             return student(*student_data)
         else:
-            print("Incorrect username or password, try again")
+            print("Incorrect username or password, please try again")
 
+# Logout function -- Give the user the option to either switch users (log out and log back in) or end the program.
 def logout():
     global access_granted
     access_granted = False
@@ -606,14 +645,17 @@ def logout():
         else:
             print("Invalid choice. Please enter 'Yes' or 'No'.")
 
+# default login functionality
 access_granted = False
 logged_in_user = None
-
 while not access_granted:
     logged_in_user = login()
     access_granted = True
 
+
+# main menu. Changes based on user type that is logged in. the isinstance will check the user type to see what type of object they are.
 while True:
+    # Admin menu
     if isinstance(logged_in_user, Admin):
         print("Welcome to the admin control panel, what would you like to do?")
         print("1. Add/Remove User")
@@ -673,6 +715,8 @@ while True:
             break
         else:
             print("Invalid choice. Please try again.")
+
+    # instructor menu
     elif isinstance(logged_in_user, instructor):
         print("Welcome to the instructor control panel, what would you like to do?")
         print("1. Print Schedule")
@@ -701,6 +745,8 @@ while True:
             break
         else:
             print("Invalid choice. Please try again.")
+
+    # Student menu
     elif isinstance(logged_in_user, student):
         print("Welcome to the student control panel, what would you like to do?")
         print("1. Print Schedule")
